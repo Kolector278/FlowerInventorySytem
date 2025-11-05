@@ -1,17 +1,21 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.RowFilter;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
-import javax.swing.plaf.FontUIResource;
+import java.sql.SQLException;
+import java.util.regex.PatternSyntaxException;
+import javax.swing.table.TableRowSorter;
+
 
 
 public class FlowerGUI extends JFrame{
     private JPanel buttonPanel;
     private JButton viewAllButton;
-    private InventoryManager manager;
+    private DatabaseManager dbManager;
     private JTable inventoryTable;
     private DefaultTableModel tableModel;
     private JButton addButton;
@@ -22,6 +26,8 @@ public class FlowerGUI extends JFrame{
     private JCheckBox catSafeBox;
     private JTextField forSearch;
     private JButton searchButton;
+    private TableRowSorter<DefaultTableModel> sorter;
+
     //Name: Kimberly Colector
 //Course: Software development 1 CEN 3024C
 //Date: 10/27/2025
@@ -30,7 +36,7 @@ public class FlowerGUI extends JFrame{
 //Showing the buttons,table with the flower data and getting input from the user.
 // it is able to get the action of the user and pass it along to the Inventory manager to handle it what its asking for.
 //Then updates the screen to show the results.
-    public FlowerGUI(){
+    public FlowerGUI(DatabaseManager manager){
         super("Ophelia Garden Inventory");
                setSize(1000,500);
                setLayout(new BorderLayout());
@@ -40,9 +46,12 @@ public class FlowerGUI extends JFrame{
             String[] columnHeaders = {"ID","Name","Color","Qty","Price","In Season","Cat Safe"};
             tableModel = new DefaultTableModel(columnHeaders,0);
             inventoryTable = new JTable(tableModel);
+            sorter = new TableRowSorter<>(tableModel);
+            inventoryTable.setRowSorter(sorter);
+            inventoryTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
             // Scroll thing
             JScrollPane scrollPane = new JScrollPane(inventoryTable);
-
             javax.swing.table.JTableHeader tableHeader = inventoryTable.getTableHeader();
 
 
@@ -116,7 +125,7 @@ public class FlowerGUI extends JFrame{
         tableHeader.setFont(new Font("Tahoma",Font.BOLD, 13));
         // background color
         getContentPane().setBackground(new Color(245,245,220));
-        JLabel searchLabel = new JLabel("Search ID:");
+        JLabel searchLabel = new JLabel("Search:");
         searchLabel.setForeground(lPink);
                 // add buttons to gui to see
                  buttonPanel.add(catSafeBox);
@@ -138,7 +147,7 @@ public class FlowerGUI extends JFrame{
                 add(buttonPanel,BorderLayout.NORTH);
                 add(scrollPane,BorderLayout.CENTER);
 
-                manager = new InventoryManager();
+                this.dbManager = manager;
                 refreshTableData(false);
             try {
                 ImageIcon logoIcon = new ImageIcon("flowershoplogoInventory.png");
@@ -153,6 +162,7 @@ public class FlowerGUI extends JFrame{
                 public void actionPerformed(ActionEvent e) {
                  System.out.println(" view all button was click");
                  refreshTableData(false);
+                 applyFilter();
                 }
             });
 
@@ -273,13 +283,14 @@ public class FlowerGUI extends JFrame{
                      }
 
                  }
-                 Flower addedFlower = manager.addFlower(name,color,quantity,price,isInSeason,safe);
+                 Flower addedFlower = dbManager.addFlower(name,color,quantity,price,isInSeason,safe);
 
                  // messages
                     if(addedFlower != null ){
                         JOptionPane.showMessageDialog(FlowerGUI.this,
                                 "Success!"+ addedFlower.getFlowerName() + "(ID:"+ addedFlower.getFlowerID()+") was added.", "Flower added",JOptionPane.INFORMATION_MESSAGE);
-                        refreshTableData(false);
+                        refreshTableData(true);
+                        applyFilter();
                     }else {
                         JOptionPane.showMessageDialog(FlowerGUI.this,"Failed to add flower","Error",JOptionPane.ERROR_MESSAGE);
 
@@ -292,136 +303,162 @@ public class FlowerGUI extends JFrame{
                 @Override
                 public void actionPerformed(ActionEvent e) {
 
-                   String idToUpdate = JOptionPane.showInputDialog(FlowerGUI.this,"Enter ID of flower: ");
-                   if (idToUpdate == null|| idToUpdate.trim().isEmpty()){
-                       return;
-                   }
-                   Flower flowerToUpdate = manager.searchByID(idToUpdate.trim());
-                   if (flowerToUpdate != null){
-                       String updateChoice = JOptionPane.showInputDialog(FlowerGUI.this,
-                               "Found:"+ flowerToUpdate.getFlowerName()+
-                               "\n What do you want to update?\n1. Color\n2.Quantity\n3. Price");
-
-                      // dealing with choice inputs
-                       if (updateChoice == null) return;
-                       updateChoice = updateChoice.trim();
+                    int viewRow = inventoryTable.getSelectedRow();
+                    if (viewRow == -1) {
+                        JOptionPane.showMessageDialog(FlowerGUI.this, "Please click on a flower to update.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    int modelRow = inventoryTable.convertRowIndexToModel(viewRow);
+                    String idToUpdate = (String) tableModel.getValueAt(modelRow, 0);
+                    String flowerName = (String) tableModel.getValueAt(modelRow, 1);
 
 
+                    String updateChoice = JOptionPane.showInputDialog(FlowerGUI.this, "Found: " + flowerName + " ID: " + idToUpdate +
+                            "\n What do you want to update?\n1. Color\n2.Quantity\n3. Price");
 
-                       if (updateChoice.equals("1")){
-                           boolean updateSuccessful = false;
-                           while (!updateSuccessful){
-                           String newColor =JOptionPane.showInputDialog(FlowerGUI.this,"Enter new color:");
-                           if (newColor == null){
-                               JOptionPane.showMessageDialog(FlowerGUI.this,"Update canceled");
-                               return;
-                           }
-                           updateSuccessful = flowerToUpdate.setFlowerColor(newColor);
+                    // dealing with choice inputs
+                    if (updateChoice == null) return;
+                    updateChoice = updateChoice.trim();
+                    boolean success = false;
 
-                           if (updateSuccessful){
-                               JOptionPane.showMessageDialog(FlowerGUI.this,"Color Update complete");
-                           }else {
-                               JOptionPane.showMessageDialog(FlowerGUI.this,"Invalid color: only enter characters","Invalid Input",JOptionPane.ERROR_MESSAGE);
-                           }
-                           }
-                           //End of choice 1
-
-
-
-                       } else if (updateChoice.equals("2")) {
-                          boolean updateTotest = false;
-                          while (!updateTotest) {
-                              String quantityInput = JOptionPane.showInputDialog(FlowerGUI.this, "Enter new quantity.Whole number please: ");
-                              if (quantityInput == null) {
-                                  JOptionPane.showMessageDialog(FlowerGUI.this, "Update cancelled");
-                                  return;
-                              }
-                              try {
-                                  int newQuantitiy = Integer.parseInt(quantityInput.trim());
-                                  boolean success = flowerToUpdate.setFlowerQuantity(newQuantitiy);
-                                  if (success){
-                                      JOptionPane.showMessageDialog(FlowerGUI.this,"Quantity updated successfully.");
-                                      updateTotest = true;
-                                  }else {
-                                      JOptionPane.showMessageDialog(FlowerGUI.this,"Invalid quantity. Quantity cannot be negative please enter correct value","Invalid Input",JOptionPane.ERROR_MESSAGE);
-                                  }
-                              } catch (Exception ex) {
-                                 JOptionPane.showMessageDialog(FlowerGUI.this,"Invaild input.Please enter a whole number for quantity.","Invalid input",JOptionPane.ERROR_MESSAGE);
-                              }
-
-                          }// End of choice 2
-
-                       } else if (updateChoice.equals("3")) {
-                           double newPrice = -1.0;
-                           while(newPrice < 0.0){
-                               String priceInput = JOptionPane.showInputDialog(FlowerGUI.this,"Enter new price (Ex: 5.99):");
-                               if (priceInput == null)return;
-                               try{
-                                    newPrice = Double.parseDouble(priceInput);
-                                    if (newPrice < 0.0){
-                                        JOptionPane.showMessageDialog(FlowerGUI.this,"Price cannot be negative try again.(Ex:5.99)","Invalid input",JOptionPane.ERROR_MESSAGE);
-                                    }
-                                }catch (NumberFormatException ex){
-                                    JOptionPane.showMessageDialog(FlowerGUI.this,"Invalid Input try again (Ex: 5.99)","Invalid input",JOptionPane.ERROR_MESSAGE);
-                                    newPrice = -1.0;
+                    if (updateChoice.equals("1")) {
+                        while (true){
+                            String newColor = JOptionPane.showInputDialog(FlowerGUI.this, "Enter new color:");
+                            if (newColor == null){
+                                success = false;
+                                break;
+                            }
+                            newColor = newColor .trim();
+                            if (newColor.isEmpty()){
+                                JOptionPane.showMessageDialog(FlowerGUI.this,"Color can not be left empty.","Invalid Input",JOptionPane.ERROR_MESSAGE);
+                                continue;
+                            }
+                            boolean isValid = true;
+                            for (int i = 0; i<newColor.length(); i++){
+                                char c = newColor.charAt(i);
+                                if (!Character.isLetter(c) && !Character.isSpaceChar(c)){
+                                    isValid = false;
+                                    break;
                                 }
-                           }
-                           flowerToUpdate.setFlowerPrice(newPrice);
-                           JOptionPane.showMessageDialog(FlowerGUI.this,"Price has been Updated!");
-                       }else {
-                           JOptionPane.showMessageDialog(FlowerGUI.this,"Invalid update choice");
-                       }
-                       refreshTableData(false);
-                   }else {
-                       JOptionPane.showMessageDialog(FlowerGUI.this,"Flower with ID "+ idToUpdate +" was not found.","search failed",JOptionPane.ERROR_MESSAGE);
-                   }
+                            }
+                            if (isValid){
+                                success = dbManager.updateFlowerColor(idToUpdate, newColor.trim());
+                                break;
+                            }else{
+                                JOptionPane.showMessageDialog(FlowerGUI.this,"Invalid color.Only letters allowed try again.","Invalid Input",JOptionPane.ERROR_MESSAGE);
+
+                            }
+
+
+                        }
+                        //End of choice 1
+
+                    } else if (updateChoice.equals("2")) {
+                        while (true) {
+                            String newQtyString = JOptionPane.showInputDialog(FlowerGUI.this, "Enter new quantity.Whole number please: ");
+                            if (newQtyString == null) {
+                                success = false;
+                                break;
+                            }
+                            try {
+                                int newQuantity = Integer.parseInt(newQtyString.trim());
+                                if (newQuantity < 0) {
+                                    JOptionPane.showMessageDialog(FlowerGUI.this, "Quantity can not be negative.Try again", "Invalid input", JOptionPane.ERROR_MESSAGE);
+                                } else {
+                                    success = dbManager.updateFlowerQuantity(idToUpdate, newQuantity);
+                                    break;
+                                }
+                            } catch (NumberFormatException ex) {
+                                JOptionPane.showMessageDialog(FlowerGUI.this, "Invalid number for quantity.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                            }
+
+                        }
+                        // End of choice 2
+
+                    } else if (updateChoice.equals("3")) {
+                        while (true) {
+                            String newPriceString = JOptionPane.showInputDialog(FlowerGUI.this, "Enter new price (Ex: 5.99):");
+                            if (newPriceString == null) {
+                                success = false;
+                                break;
+                            }
+                            try {
+                                double newPrice = Double.parseDouble(newPriceString.trim());
+
+                                if (newPrice < 0.0) {
+                                    JOptionPane.showMessageDialog(FlowerGUI.this, "Price cannot be negative please try again.", "Invalid Input", JOptionPane.ERROR_MESSAGE);
+                                } else {
+                                    success = dbManager.updateFlowerPrice(idToUpdate, newPrice);
+                                    break;
+                                }
+                            } catch (NumberFormatException ex) {
+                                JOptionPane.showMessageDialog(FlowerGUI.this, "Invalid input.Please enter a number(ex: 5.99)", "Invalid Input", JOptionPane.ERROR_MESSAGE);
+                            }
+
+                        }
+                    }if (success){
+                        JOptionPane.showMessageDialog(FlowerGUI.this,"Update is ssuccessful");
+                        refreshTableData(true);
+                        applyFilter();
+                    }else {
+                        if (updateChoice != null){
+                            JOptionPane.showMessageDialog(FlowerGUI.this,"Update failed","Error",JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
                 }
-            });// End of Update section
+
+            }); // End of Update section
 
         deleteButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String idToDelete = JOptionPane.showInputDialog(FlowerGUI.this,"Enter the ID of the flower to delete:");
-                if (idToDelete == null || idToDelete.isEmpty()){
+                int viewRow = inventoryTable.getSelectedRow();
+                if (viewRow == -1){
+                    JOptionPane.showMessageDialog(FlowerGUI.this,"Please click on a flower","Error",JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                boolean wasDeleted = manager.deleteFlower(idToDelete);
-                // Flower flowerToDelete = manager.searchByID(idToDelete.trim());
-                if (wasDeleted){
-                    JOptionPane.showMessageDialog(FlowerGUI.this,"Flower was deleted successfully.","Success",JOptionPane.INFORMATION_MESSAGE);
-                    refreshTableData( false);
+                int modelRow = inventoryTable.convertRowIndexToModel(viewRow);
+                String idToDelete = (String) tableModel.getValueAt(modelRow,0);
+                String flowerName = (String) tableModel.getValueAt(modelRow,1);
 
-                }else {
-                    JOptionPane.showMessageDialog(FlowerGUI.this,"Flower wit ID:" + idToDelete+" was not found.","Delete Failed",JOptionPane.ERROR_MESSAGE);
+                int choice = JOptionPane.showConfirmDialog(FlowerGUI.this, "Confirming you want to delete "+flowerName+"'(ID:"+ idToDelete+")?","Confirm Deletion",JOptionPane.YES_NO_OPTION);
+                if (choice != JOptionPane.YES_OPTION){
+                    return;
                 }
+                dbManager.deleteFlower(idToDelete);
+                JOptionPane.showMessageDialog(FlowerGUI.this,"Flower deleted successfully.","Success",JOptionPane.INFORMATION_MESSAGE);
+                tableModel.removeRow(modelRow);
             }
         });//End of delete section
 
         searchButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String idToSearch = forSearch.getText().trim();
-                Flower foundFlower = manager.searchByID(idToSearch);
-                if (idToSearch.isEmpty()){
-                    JOptionPane.showMessageDialog(FlowerGUI.this,"please enter an ID to search for.","Missing Input",JOptionPane.WARNING_MESSAGE);
+                String searchTerm = forSearch.getText().trim();
+                if (searchTerm.isEmpty()){
+                    JOptionPane.showMessageDialog(FlowerGUI.this,"please enter a name or color to search for.","Missing Input",JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-
+                List<Flower> foundFlowers = dbManager.searchBYNameorColor(searchTerm);
 
                 tableModel.setRowCount(0);
-                if (foundFlower != null){
-                    Object[] rowData = {
-                            foundFlower.getFlowerID(),
-                            foundFlower.getFlowerName(),
-                            foundFlower.getFlowerColor(),
-                            foundFlower.getFlowerQuantity(),
-                            foundFlower.getFlowerPrice(),
-                            foundFlower.isInSeason(),
-                            foundFlower.isSafeForCats()
-                    };
-                    tableModel.addRow(rowData);
+                if (!foundFlowers.isEmpty()){
+
+                    for (Flower foundFlower : foundFlowers) {
+                        Object[] rowData = {
+                                foundFlower.getFlowerID(),
+                                foundFlower.getFlowerName(),
+                                foundFlower.getFlowerColor(),
+                                foundFlower.getFlowerQuantity(),
+                                foundFlower.getFlowerPrice(),
+                                foundFlower.isInSeason(),
+                                foundFlower.isSafeForCats()
+                        };
+                        tableModel.addRow(rowData);
+                    }
+                    applyFilter();
                 }else {
-                    JOptionPane.showMessageDialog(FlowerGUI.this,"No flower found with ID:"+ idToSearch,"Search Failed",JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(FlowerGUI.this,"No flower found matching:"+ searchTerm,"Search Failed",JOptionPane.INFORMATION_MESSAGE);
 
                 }
             }
@@ -430,36 +467,34 @@ public class FlowerGUI extends JFrame{
         loadButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setCurrentDirectory(new java.io.File("."));
-            fileChooser.setDialogTitle("Select Inventory File");
+           JFileChooser fileChooser = new JFileChooser();
+           fileChooser.setDialogTitle("Select New SQLite Database");
+           fileChooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("SQLite Database(*.db)","db"));
             int result = fileChooser.showOpenDialog(FlowerGUI.this);
-
-            if (result == JFileChooser.APPROVE_OPTION){
+            
+            if (result == JFileChooser.APPROVE_OPTION){ 
                 java.io.File selectedFile = fileChooser.getSelectedFile();
-                String filePath = selectedFile.getAbsolutePath();
-
-                boolean didLoad = manager.loadFromFile(filePath);
-
-                if (didLoad){
-                    manager.resetIDCounter();
-                    refreshTableData(false);
-                    JOptionPane.showMessageDialog(FlowerGUI.this,"Successfully loaded new from:\n"+filePath,"Load Successful", JOptionPane.INFORMATION_MESSAGE);
-
-                }else {
-                    JOptionPane.showMessageDialog(FlowerGUI.this,"Failed to load inventory from:\n"+filePath+"\nCheck console for details.",
-                            "Load Failed",JOptionPane.ERROR_MESSAGE);
+                String newPath = selectedFile.getAbsolutePath();
+                try{
+                    String newURL = "jdbc:sqlite:"+ newPath;
+                    DatabaseManager newDbManager = new DatabaseManager(newURL);
+                    FlowerGUI.this.dbManager = newDbManager;
+                    refreshTableData(true);
+                    JOptionPane.showMessageDialog(FlowerGUI.this,"Successfully loaded new database:\n"+ newPath,"Load Successful",JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(FlowerGUI.this,"Failed to load database:\n"+ newPath,"Load Failed",JOptionPane.ERROR_MESSAGE);
                 }
-            }else{
-                System.out.println("File selection cancelled.");
             }
+                //refreshTableData(true);
+                // JOptionPane.showMessageDialog(FlowerGUI.this,"data reloaded from database.","Load successful",JOptionPane.INFORMATION_MESSAGE);
+
 
             }
         });// End of loadButton section
         totalValueButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-            double total = manager.calculateTotalValue();
+            double total = dbManager.calculateTotalValue();
             String formattedTotal = String.format("%.2f",total);
             JOptionPane.showMessageDialog(FlowerGUI.this," Total Inventory vale: $"+formattedTotal,"Inventory Value",JOptionPane.INFORMATION_MESSAGE);
 
@@ -469,8 +504,7 @@ public class FlowerGUI extends JFrame{
         catSafeBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                boolean isChecked = catSafeBox.isSelected();
-                refreshTableData(isChecked);
+                applyFilter();
 
             }
         });
@@ -481,35 +515,53 @@ public class FlowerGUI extends JFrame{
                 setVisible(true);
     }
     // Method Name: refreshTableData
-    // Purpose: the method updates what shown in the table .it clears out any old rows.
+    // Purpose: The method updates what shown in the table .it clears out any old rows.
     // Then gets the updated list of flowers from the InventoryManager either all or just cats safe.
     // Arguments: onlyCatSafe is a boolean value. if true it only shows cat safe flowers.
     // when false it shows all the flowers in the Inventory.
     //Return Value:void
     private void refreshTableData(boolean onlyCatSafe){
         tableModel.setRowCount(0);
-        List<Flower> flowersToShow;
-        if (onlyCatSafe){
-             flowersToShow = manager.getCatSafeFlower();
-        }else {
-            flowersToShow = manager.getInventory();
-        }
-        System.out.println("refresh table data found "+ flowersToShow.size()+" flower to show");
-
+        List<Flower> flowersToShow = dbManager.getAllFlowers();
         for (Flower flower : flowersToShow){
+            String inSesonString = flower.isInSeason()? "true":"false";
+            String catSafeString = flower.isSafeForCats()? "true":"false";
             Object[] rowData = {
                     flower.getFlowerID(),
                     flower.getFlowerName(),
                     flower.getFlowerColor(),
                     flower.getFlowerQuantity(),
                     flower.getFlowerPrice(),
-                    flower.isInSeason(),
-                    flower.isSafeForCats()
+                    inSesonString,
+                    catSafeString
             };
             tableModel.addRow(rowData);
         }
+        applyFilter();
 
     }
+
+   /*
+   Method Name : applyFilter
+   Purpose: It checks  catSafeBox is ticked. then tells the sorter to only show flowers with true in
+   cat safe column. if it's not ticked  the sorter shows everything.
+   Arguments: None
+   Return Value: void
+    */
+
+    private  void applyFilter(){
+        RowFilter<DefaultTableModel,Object> ct = null;
+        if (catSafeBox.isSelected()){
+            try{
+                ct = RowFilter.regexFilter("(?i)true",6);
+            } catch (PatternSyntaxException e) {
+                System.err.println("Bad"+ e.getMessage());
+            }
+        }
+        sorter.setRowFilter(ct);
+    }
+
+   //private  String forValidating()
 
 
 

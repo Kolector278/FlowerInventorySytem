@@ -66,12 +66,22 @@ public class Login extends JFrame {
         String password = new String(passwordField.getPassword());
 
         if (username.equals("Manager278242")&& password.equals("Admin")){
-            JOptionPane.showMessageDialog(this,"Login successful");
+
+           String databasePath = JOptionPane.showInputDialog(
+                   this,"Enter full file path to the inventory.db database:",
+                   "Database Connection",JOptionPane.QUESTION_MESSAGE
+           );
+           if (databasePath == null|| databasePath.trim().isEmpty()){
+               JOptionPane.showMessageDialog(this,"No database path provided.","Error",JOptionPane.ERROR_MESSAGE);
+               System.exit(0);
+           }
+           String databaseURL = "jdbc:sqlite:"+ databasePath;
+           final  DatabaseManager dbManager = new DatabaseManager(databaseURL);
             dispose();
             SwingUtilities.invokeLater(new Runnable() {
                 @Override
                 public void run() {
-                    new FlowerGUI();
+                    new FlowerGUI(dbManager).setVisible(true);
                 }
             });
         } else{
