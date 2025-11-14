@@ -6,11 +6,19 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
-import java.sql.SQLException;
 import java.util.regex.PatternSyntaxException;
 import javax.swing.table.TableRowSorter;
 
-
+/**
+ * Name: Kimberly Colector
+ * Course: Software development 1 CEN 3024C
+ * Date: 10/27/2025
+ * Class Name: FlowerGUI
+ * Class Function: The class the mein window for the flower invcentory program.
+ * Its the user interface,showing buttons, flower data,amd pop up boxes for input.
+ * When the user clisck the button the class tells the DatabaseManager what action to perform
+ * and then updates the screen to show the results.
+ */
 
 public class FlowerGUI extends JFrame{
     private JPanel buttonPanel;
@@ -28,14 +36,13 @@ public class FlowerGUI extends JFrame{
     private JButton searchButton;
     private TableRowSorter<DefaultTableModel> sorter;
 
-    //Name: Kimberly Colector
-//Course: Software development 1 CEN 3024C
-//Date: 10/27/2025
-//Class Name: FlowerGUI
-// Class Function : This class creates the interface/Window for the flower Inventory.
-//Showing the buttons,table with the flower data and getting input from the user.
-// it is able to get the action of the user and pass it along to the Inventory manager to handle it what its asking for.
-//Then updates the screen to show the results.
+    /**
+     * Method Name: FlowerGUI
+     * Purpose: Creates the main window it accepts the DatabaseManager
+     * from the loginFrame and saves it then builds all the components such as button ,table and add all the ActionListeners.
+     * @param manager manager the DatabaseManager created by Login window.
+     */
+
     public FlowerGUI(DatabaseManager manager){
         super("Ophelia Garden Inventory");
                setSize(1000,500);
@@ -148,7 +155,7 @@ public class FlowerGUI extends JFrame{
                 add(scrollPane,BorderLayout.CENTER);
 
                 this.dbManager = manager;
-                refreshTableData(false);
+                refreshTableData();
             try {
                 ImageIcon logoIcon = new ImageIcon("flowershoplogoInventory.png");
                 setIconImage(logoIcon.getImage());
@@ -156,12 +163,14 @@ public class FlowerGUI extends JFrame{
                 System.out.println("error loading image");
             }
 
+
+
         // making the button function
             viewAllButton.addActionListener(new ActionListener() {
                 @Override
                 public void actionPerformed(ActionEvent e) {
                  System.out.println(" view all button was click");
-                 refreshTableData(false);
+                 refreshTableData();
                  applyFilter();
                 }
             });
@@ -289,7 +298,7 @@ public class FlowerGUI extends JFrame{
                     if(addedFlower != null ){
                         JOptionPane.showMessageDialog(FlowerGUI.this,
                                 "Success!"+ addedFlower.getFlowerName() + "(ID:"+ addedFlower.getFlowerID()+") was added.", "Flower added",JOptionPane.INFORMATION_MESSAGE);
-                        refreshTableData(true);
+                        refreshTableData();
                         applyFilter();
                     }else {
                         JOptionPane.showMessageDialog(FlowerGUI.this,"Failed to add flower","Error",JOptionPane.ERROR_MESSAGE);
@@ -398,7 +407,7 @@ public class FlowerGUI extends JFrame{
                         }
                     }if (success){
                         JOptionPane.showMessageDialog(FlowerGUI.this,"Update is ssuccessful");
-                        refreshTableData(true);
+                        refreshTableData();
                         applyFilter();
                     }else {
                         if (updateChoice != null){
@@ -479,7 +488,7 @@ public class FlowerGUI extends JFrame{
                     String newURL = "jdbc:sqlite:"+ newPath;
                     DatabaseManager newDbManager = new DatabaseManager(newURL);
                     FlowerGUI.this.dbManager = newDbManager;
-                    refreshTableData(true);
+                    refreshTableData();
                     JOptionPane.showMessageDialog(FlowerGUI.this,"Successfully loaded new database:\n"+ newPath,"Load Successful",JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(FlowerGUI.this,"Failed to load database:\n"+ newPath,"Load Failed",JOptionPane.ERROR_MESSAGE);
@@ -514,13 +523,20 @@ public class FlowerGUI extends JFrame{
                 setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
                 setVisible(true);
     }
-    // Method Name: refreshTableData
-    // Purpose: The method updates what shown in the table .it clears out any old rows.
-    // Then gets the updated list of flowers from the InventoryManager either all or just cats safe.
-    // Arguments: onlyCatSafe is a boolean value. if true it only shows cat safe flowers.
-    // when false it shows all the flowers in the Inventory.
-    //Return Value:void
-    private void refreshTableData(boolean onlyCatSafe){
+
+    /**
+     * Method Name: refreshedTableDate
+     * Purpose: It updates the JTable.It clears the table, calls the database Manager
+     * to get fresh list of all flowers and then add them one by one to the table.
+     * It converts the booleans into Strings so the filter can read them.At the end it calls the apply filter()
+     * to make sure the view is correct.
+     *  Arguments: none
+     *  return value : void
+     */
+
+
+
+    private void refreshTableData(){
         tableModel.setRowCount(0);
         List<Flower> flowersToShow = dbManager.getAllFlowers();
         for (Flower flower : flowersToShow){
@@ -541,13 +557,12 @@ public class FlowerGUI extends JFrame{
 
     }
 
-   /*
-   Method Name : applyFilter
-   Purpose: It checks  catSafeBox is ticked. then tells the sorter to only show flowers with true in
-   cat safe column. if it's not ticked  the sorter shows everything.
-   Arguments: None
-   Return Value: void
-    */
+
+    /**
+     *Method Name : applyFilter
+     * Purpose: Is the cat safe filter. It checks  catSafeBox is ticked. then tells the sorter to only show flowers with true in
+     * cat safe column. if it's not ticked  the sorter shows everything.
+     */
 
     private  void applyFilter(){
         RowFilter<DefaultTableModel,Object> ct = null;

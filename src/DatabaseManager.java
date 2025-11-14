@@ -2,23 +2,30 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-//Course:Software development 1 CEN 3024C
-// Date: 10/29/25
-//Class Name: DatabaseManager
-// Class Function: this class is the new engine for the inventory. it replaces the
-// old InventoryManager. the class job is to handle the inventory database.
-// it connects to the FlowerGUI by using the methods from here.
+/**
+ * Name: Kimberly Colector
+ * Course:Software development 1 CEN 3024C
+ * Date: 10/29/25
+ * Class Name: DatabaseManager
+ * Class Function:This class is the new engine for the inventory system. It replaces the
+ * old InventoryManager. The class job is to handle the inventory database.
+ * The FlowerGUI class will call methods from here to get , add , update or delete flowers from the database.
+ *
+ */
+
 
 
 public class DatabaseManager {
 private  String databaseURL;
-/*
-Method Name: DatabaseManager
-Purpose: it saves the database filePath and load the special SQLite so Java can understand
-and talk to database file.
-Arguments:databaseURL - string ex: C:\temp\inventory.db. that tell the manager where teh database file is.
-Return Value: none
- */
+
+    /**
+     * Method Name: DatabaseManager (Constructor)
+     * Purpose: This is what runs when the Login creates a new DatabaseManager.
+     * It saves the database file path and loads the special SQLite driver so java can understand
+     * how to talk the  database file.
+     * @param databaseURL A string (Example: jdbc:sqlite:C:\temp\inventory.db) that
+     * tells the manager where the database file is.
+     */
     public  DatabaseManager(String databaseURL){
         this.databaseURL = databaseURL;
         try{
@@ -28,22 +35,26 @@ Return Value: none
             e.printStackTrace();
         }
     }
-/*
-Method: connect
-Purpose: It opens  a new connection to the database
-Arguments: None
-Return value: a connection object.
- */
+
+    /**
+     * Method: connect
+     * Purpose: It a private helper method it opens a new connection to the database.
+     * @return A Connection object
+     * @throws SQLException if it cant connect to the database.
+     */
+
 private Connection connect() throws SQLException{
         return DriverManager.getConnection(databaseURL);
 }
-    /*
-    Method: getAllFlowers
-    Purpose: grabs evry flower from the products table and put them into a list.
-    the GUI uses to fill the Table.
-    Arguments: None
-    Return value: a List <Flower> with all the flowers.
+
+    /**
+     * Method Name: getAllFlowers
+     * Purpose: This garbs every single flower from teh 'products' table
+     * and puts them into  a big list.This is what the GUI uses to fill teh JTable.
+     * @return A List<Flower> with all the flower.
      */
+
+
 public List<Flower> getAllFlowers(){
         String sql = "SELECT id,name,color,quantity,price,is_in_season,is_safe_for_cats FROM products";
         List<Flower> flowerList = new ArrayList<>();
@@ -79,7 +90,21 @@ public List<Flower> getAllFlowers(){
 
     Return value: A new flower object it just created with new 6 digit ID or return null if something went wrong.
      */
-public Flower addFlower(String name,String color,int quantity,double price,String isInSeason, String isSafeForCats){
+
+    /**
+     * Method Name : addFlower
+     * Purpose: Takes all the info from the GUI pop up boxes and inserts
+     * it as new row in the 'products' table.
+     * @param name The flower's name.
+     * @param color The flower's color.
+     * @param quantity The stock quantity.
+     * @param price The flower's price.
+     * @param isInSeason "yes"or"no"
+     * @param isSafeForCats "yes" or "no"
+     * @return The newly created Flower object it just created with the new 6 digit ID. Returns null if something went wrong.
+     */
+
+    public Flower addFlower(String name,String color,int quantity,double price,String isInSeason, String isSafeForCats){
         String sql ="INSERT INTO products(name,color,quantity,price,is_in_Season,is_safe_for_cats) Values(?,?,?,?,?,?)";
         int inSeasonInt = isInSeason.equalsIgnoreCase("yes")? 1:0;
         int catSafeInt = isSafeForCats.equalsIgnoreCase("yes")? 1:0;
@@ -96,8 +121,8 @@ public Flower addFlower(String name,String color,int quantity,double price,Strin
            if (affectedRows >0 ){
                try(ResultSet rs = pstmt.getGeneratedKeys()){
                    if (rs.next()){
-                       int id = rs.getInt(1);
-                       return  new Flower(String.valueOf(id),name,color,quantity,price,inSeasonInt == 1, catSafeInt ==1);
+                       int id = rs.getInt(1); // The new 6 digit ID
+                       return  new Flower(String.valueOf(id),name,color,quantity,price,inSeasonInt == 1, catSafeInt ==1);  // Convert back to string
                    }
                }
            }
@@ -108,13 +133,12 @@ public Flower addFlower(String name,String color,int quantity,double price,Strin
         return null;
 }
 
-/*
-Method: deleteFlower
-Purpose: Delete a flower from the products table. it gets the 6 digit ID  string then converts it
-to numbers and runs the sql DELETE command.
-Arguments: flowerID - string  the 6 digit Id  of the flower to delete.
-Return value: void
- */
+    /**
+     * Method: deleteFlower
+     * Purpose: Deletes a specific flower record from the products table using its ID.
+     * @param flowerId The 6 digit ID of the flower to delete.
+     */
+
 
 public  void  deleteFlower(String flowerId){
       String sql = "DELETE FROM products WHERE id = ?";
@@ -129,6 +153,14 @@ public  void  deleteFlower(String flowerId){
           System.out.println("Error: ID to delete was not a valid number: "+ flowerId);
       }
 }
+
+    /**
+     * Method Name: updateFlowerColor
+     * Purpose: Updates just the color for one flower in the database.
+     * @param flowerId The 6 digit ID of the flower to update.
+     * @param newColor The new color to save.
+     * @return true if it worked , false if it failed.
+     */
 
 // Update Section//
     /*
@@ -153,13 +185,14 @@ public  boolean updateFlowerColor(String flowerId,String newColor){
         }
 
 }
-/*
-Method: updateFlowerQuantity
-Purpose: update the quantity for the flower selected in the database.
-Arguments: flowerId - string Id of the flower.
-* newQuantity int the new number to save.
-Return value: boolean true if it worked or false if it failed.
- */
+
+    /**
+     * Method: updateFlowerQuantity
+     * Purpose: Updates just the quantity for one flower in the database.
+     * @param flowerId The 6 didgit ID of the flower to update.
+     * @param newQuantity The new number to save.
+     * @return true if it worked, false if it failed.
+     */
 
 public boolean updateFlowerQuantity(String flowerId, int newQuantity){
         String sql = "UPDATE products SET quantity = ? WHERE id = ?";
@@ -174,13 +207,14 @@ public boolean updateFlowerQuantity(String flowerId, int newQuantity){
             return false;
         }
     }
-    /*
-Method: updateFlowerPrice
-Purpose: Updates the price for the flower selected from the database.
-Arguments: flowerId - string Id of the flower.
-          * newPrice - double the new price to save.
-Return value: boolean true if it worked or false if it failed.
- */
+
+    /**
+     * Method: updateFlowerPrice
+     * Purpose: Updates just the price for the flower in the database.
+     * @param flowerId The 6 digit ID of the flower to update.
+     * @param newPrice Then new price to save.
+     * @return true if it worked , false if it failed
+     */
 
 public boolean updateFlowerPrice(String flowerId, double newPrice){
         String sql = "UPDATE products SET price = ? WHERE id = ?";
@@ -196,12 +230,14 @@ public boolean updateFlowerPrice(String flowerId, double newPrice){
         }
 }
 
-    /*
-    Method: searchBYNameorColor
-    Purpose: finds all flower that match the search term. it checks both name and color columns.
-    Arguments: searchTerm - String text of what the user type in ex: Rose or pink.
-    Return value: a List <Flower> with all the flowers that match or empty list if no matches are found.
+    /**
+     * Method: searchBYNameorColor
+     * @param searchTerm The text the user typed examples red or roses.
+     * @return a List <Flower > with all the flowers that matched or an empty list
+     * if no matches were found.
      */
+
+
 public List<Flower> searchBYNameorColor(String searchTerm){
         String sql = "SELECT * FROM products WHERE name LIKE ? OR color LIKE?";
         List<Flower> flowerList = new ArrayList<>();
@@ -235,13 +271,11 @@ public List<Flower> searchBYNameorColor(String searchTerm){
         return flowerList;
 }
 
-/*
-Method: CalculateTotalValue
-Purpose: Calculates the total value of all flowers in the inventory by (quantity * price).
-Arguments: none
-Return value: double with total Value of the inventory.
- */
-
+    /**
+     * Method: CalculateTotalValue
+     * Purpose: Calculates the total value of all flowers in the inventory.
+     * @return a double with the total value Example: 121.23
+     */
 public double calculateTotalValue(){
         String sql = "SELECT sum (quantity * price)FROM products";
         double totalValue = 0.0;
