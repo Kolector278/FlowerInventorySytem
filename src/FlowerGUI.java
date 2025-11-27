@@ -406,7 +406,7 @@ public class FlowerGUI extends JFrame{
 
                         }
                     }if (success){
-                        JOptionPane.showMessageDialog(FlowerGUI.this,"Update is ssuccessful");
+                        JOptionPane.showMessageDialog(FlowerGUI.this,"Update is successful");
                         refreshTableData();
                         applyFilter();
                     }else {
@@ -505,7 +505,7 @@ public class FlowerGUI extends JFrame{
             public void actionPerformed(ActionEvent e) {
             double total = dbManager.calculateTotalValue();
             String formattedTotal = String.format("%.2f",total);
-            JOptionPane.showMessageDialog(FlowerGUI.this," Total Inventory vale: $"+formattedTotal,"Inventory Value",JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(FlowerGUI.this," Total Inventory value: $"+formattedTotal,"Inventory Value",JOptionPane.INFORMATION_MESSAGE);
 
             }
         });// end of total Value section
